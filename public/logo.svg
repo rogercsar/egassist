@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="40" viewBox="0 0 160 40" role="img" aria-label="EG Assist logo">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <rect rx="8" width="40" height="40" fill="url(#g)"/>
+  <g transform="translate(48, 28)" fill="#0f172a">
+    <text font-family="Inter, system-ui, -apple-system, Segoe UI" font-size="20" font-weight="700">EG Assist</text>
+  </g>
+  <g transform="translate(8, 12)" fill="#e5e7eb">
+    <path d="M4 0h16a2 2 0 0 1 2 2v6H2V2a2 2 0 0 1 2-2z"/>
+    <rect x="2" y="10" width="20" height="6" rx="2" fill="#fff" opacity="0.9"/>
+    <rect x="2" y="18" width="20" height="6" rx="2" fill="#fff" opacity="0.8"/>
+  </g>
+</svg>
