@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-black: #111111;
+  --brand-gold: #B8860B;
+}
+
+html, body { height: 100%; }
+body {
+  background-color: #f7f7f7;
+  color: var(--brand-black);
+}
+
+/* Utilitários de marca */
+.brand-gradient {
+  background-image: linear-gradient(90deg, var(--brand-gold), #d4a017);
+}
