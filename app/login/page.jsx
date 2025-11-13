@@ -41,7 +41,9 @@ function LoginForm() {
       return;
     }
     setInfoMsg("Login realizado com sucesso.");
+    // Após login, force atualização para que middleware/SSR reconheça os cookies
     router.replace(nextPath);
+    router.refresh();
   };
 
   const handleGoogle = async () => {
