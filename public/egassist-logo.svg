@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title>EG Assist</title>
+  <desc>Logo simplificado inspirado no egassist: letra e com check e texto EG Assist.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- Fundo transparente, gradiente leve desativado -->
+  <rect x="0" y="0" width="256" height="256" fill="url(#bg)" />
+
+  <!-- Letra 'e' estilizada -->
+  <path d="M 84 84 C 84 62 103 44 130 44 C 162 44 182 66 182 92 C 182 108 172 120 156 126 C 142 132 122 132 98 132 L 98 136 C 98 154 114 166 138 166 C 154 166 170 162 182 154 L 182 180 C 166 190 148 196 128 196 C 92 196 66 176 66 146 L 66 120 C 66 100 74 88 84 84 Z" fill="none" stroke="#111111" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Check dourado ao lado da letra -->
+  <path d="M 176 86 L 192 104 L 222 70" fill="none" stroke="#b48a2c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Texto EG Assist -->
+  <g font-family="Segoe UI, Arial, Helvetica, sans-serif" font-weight="700">
+    <text x="28" y="232" font-size="32" fill="#111111">EG</text>
+    <text x="78" y="232" font-size="32" fill="#b48a2c">Assist</text>
+  </g>
+</svg>

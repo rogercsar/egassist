@@ -8,12 +8,13 @@ export async function proxy(req) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const protectedPaths = ["/eventos", "/contratantes", "/fornecedores"];
+  const protectedPaths = ["/dashboard", "/eventos", "/contratantes", "/fornecedores", "/modelos", "/calendario"];
   const isProtected = protectedPaths.some((p) => req.nextUrl.pathname.startsWith(p));
 
   if (isProtected && !session) {
     const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("next", req.nextUrl.pathname);
+    const nextPath = req.nextUrl.pathname + req.nextUrl.search;
+    loginUrl.searchParams.set("next", nextPath);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -21,5 +22,5 @@ export async function proxy(req) {
 }
 
 export const config = {
-  matcher: ["/eventos/:path*", "/contratantes/:path*", "/fornecedores/:path*"],
+  matcher: ["/dashboard/:path*", "/eventos/:path*", "/contratantes/:path*", "/fornecedores/:path*", "/modelos/:path*", "/calendario/:path*"],
 };

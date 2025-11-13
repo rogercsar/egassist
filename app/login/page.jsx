@@ -62,7 +62,7 @@ function LoginForm() {
     <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <div className="flex justify-center mb-4">
-          <Image src="/egassist-logo.png" alt="EG Assist" width={160} height={42} />
+          <Image src="/egassist-logo.svg" alt="EG Assist" width={96} height={96} priority />
         </div>
         <h1 className="text-xl font-semibold text-slate-900 text-center">Entrar</h1>
         <p className="mt-1 text-sm text-slate-600 text-center">Faça login para continuar</p>
