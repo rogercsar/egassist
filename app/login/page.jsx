@@ -5,8 +5,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { supabase } from "../../lib/supabaseClient";
 import { Suspense } from "react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 
 
@@ -28,6 +28,8 @@ function LoginForm() {
   const [errorMsg, setErrorMsg] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
 
+  const supabase = createClientComponentClient();
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg("");
@@ -41,7 +43,6 @@ function LoginForm() {
       return;
     }
     setInfoMsg("Login realizado com sucesso.");
-    // Após login, force atualização para que middleware/SSR reconheça os cookies
     router.replace(nextPath);
     router.refresh();
   };
