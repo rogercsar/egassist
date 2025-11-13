@@ -8,8 +8,10 @@ export const metadata = {
     shortcut: '/egassist-logo.png',
     apple: '/egassist-logo.png',
   },
-  themeColor: '#111111',
-}
+  // themeColor removido; migrado para viewport
+};
+
+export const viewport = { themeColor: '#111111' };
 
 export default function RootLayout({ children }) {
   return (

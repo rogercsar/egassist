@@ -4,12 +4,15 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
 
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams?.get("next") || "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,11 +27,12 @@ export default function LoginPage() {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      setErrorMsg(error.message || "Email ou senha inválidos.");
+      const msg = error.message || "Email ou senha inválidos.";
+      setErrorMsg(msg.includes("confirm") ? "E-mail não confirmado. Verifique sua caixa de entrada ou reenvie a confirmação." : msg);
       return;
     }
     setInfoMsg("Login realizado com sucesso.");
-    router.push("/eventos");
+    router.replace(nextPath);
   };
 
   const handleGoogle = async () => {
@@ -36,6 +40,13 @@ export default function LoginPage() {
     const redirectTo = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
     if (error) setErrorMsg(error.message);
+  };
+
+  const handleResend = async () => {
+    setErrorMsg("");
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    if (error) return setErrorMsg(error.message);
+    setInfoMsg("E-mail de confirmação reenviado. Verifique sua caixa de entrada.");
   };
 
   return (
@@ -60,7 +71,14 @@ export default function LoginPage() {
         </form>
 
         {errorMsg && (
-          <div className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errorMsg}</div>
+          <div className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {errorMsg}
+            <div className="mt-2">
+              <button onClick={handleResend} className="text-blue-600 hover:underline">
+                Reenviar e-mail de confirmação
+              </button>
+            </div>
+          </div>
         )}
         {infoMsg && (
           <div className="mt-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">{infoMsg}</div>
