@@ -142,6 +142,7 @@ export default function EventoDetalhe() {
     if (id) {
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const formatCurrency = (value: number) => {
@@ -318,138 +319,6 @@ export default function EventoDetalhe() {
       </AppLayout>
     );
   }
-
-  return (
-    <AppLayout>
-      {error && <ErrorToast message={error} onClose={clearError} />}
-      {success && <SuccessToast message={success} onClose={() => setSuccess(null)} />}
-      <ConfirmDialog
-        isOpen={showDeleteConfirm}
-        title="Deletar Documento"
-        message="Tem certeza que deseja deletar este documento? Esta ação não pode ser desfeita."
-        confirmText="Deletar"
-        cancelText="Cancelar"
-        variant="danger"
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => {
-          setShowDeleteConfirm(false);
-          setDocToDelete(null);
-        }}
-      />
-      <div className="max-w-7xl mx-auto">
-          <div className="lg:col-span-3 bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100">
-            <div className="p-6 border-b border-slate-100 flex items-center gap-2">
-              <Paperclip className="w-5 h-5 text-amber-600" />
-              <h2 className="text-lg font-semibold text-slate-900">Documentos anexados</h2>
-            </div>
-            <div className="p-6">
-              {docsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-amber-500 border-t-transparent"></div>
-                </div>
-              ) : documentos.length === 0 ? (
-                <div className="text-center text-slate-500 py-8">
-                  Nenhum documento enviado. Utilize o formulário ao lado para começar.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {documentos.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-gradient-to-r from-white to-slate-50"
-                    >
-                      <div>
-                        <p className="font-semibold text-slate-900">{doc.nome_arquivo}</p>
-                        <p className="text-xs text-slate-500">
-                          {doc.tipo_documento || 'Documento'} · {formatFileSize(doc.tamanho)} ·{' '}
-                          {new Date(doc.created_at).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <a
-                          href={`/api/eventos/${evento.id}/documentos/${doc.id}/download`}
-                          className="p-2 rounded-lg border border-slate-200 hover:bg-slate-100"
-                          title="Baixar"
-                        >
-                          <Download className="w-4 h-4" />
-                        </a>
-                        <button
-                          onClick={() => handleDeleteClick(doc.id)}
-                          className="p-2 rounded-lg border border-slate-200 hover:bg-red-50 text-red-600"
-                          title="Excluir"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100">
-            <div className="p-6 border-b border-slate-100 flex items-center gap-2">
-              <UploadCloud className="w-5 h-5 text-amber-600" />
-              <h2 className="text-lg font-semibold text-slate-900">Enviar documento</h2>
-            </div>
-            <form onSubmit={handleUploadDocumento} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
-                <select
-                  value={documentoForm.tipo_documento}
-                  onChange={(e) => setDocumentoForm((prev) => ({ ...prev, tipo_documento: e.target.value }))}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500"
-                >
-                  <option value="Contrato">Contrato</option>
-                  <option value="Proposta">Proposta</option>
-                  <option value="Nota Fiscal">Nota Fiscal</option>
-                  <option value="Outro">Outro</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Arquivo</label>
-                <input
-                  type="file"
-                  required
-                  onChange={(e) => setDocumentoForm((prev) => ({ ...prev, file: e.target.files?.[0] || null }))}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={uploadingDocumento || !documentoForm.file}
-                className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold shadow-lg shadow-amber-500/30 disabled:opacity-50"
-              >
-                {uploadingDocumento ? 'Enviando...' : 'Anexar documento'}
-              </button>
-              <p className="text-xs text-slate-400">
-                Aceitamos arquivos em PDF, DOCX e imagens até 5MB. Armazenados com segurança para consulta fututra.
-              </p>
-            </form>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (!evento) {
-    return (
-      <AppLayout>
-        <div className="max-w-4xl mx-auto text-center py-12">
-          <p className="text-slate-500 mb-4">Evento não encontrado</p>
-          <Link to="/eventos" className="text-amber-600 hover:text-amber-700 font-medium">
-            Voltar para eventos
-          </Link>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  const lucro = evento.valor_total_receber - evento.valor_total_custos;
-  const margemLucro = evento.valor_total_receber > 0 
-    ? (lucro / evento.valor_total_receber) * 100 
-    : 0;
 
   return (
     <AppLayout>

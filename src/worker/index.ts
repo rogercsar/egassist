@@ -592,32 +592,36 @@ app.get('/api/contratantes/:id', validateId(), authMiddleware, async (c) => {
       return c.json({ error: 'Contratante não encontrado' }, 404);
     }
 
-  const { results: eventos } = await c.env.DB.prepare(
-    `SELECT * FROM eventos WHERE contratante_id = ? AND user_id = ? ORDER BY data_evento DESC`
-  ).bind(contratanteId, user.id).all();
+    const { results: eventos } = await c.env.DB.prepare(
+      `SELECT * FROM eventos WHERE contratante_id = ? AND user_id = ? ORDER BY data_evento DESC`
+    ).bind(contratanteId, user.id).all();
 
-  const totalReceita = eventos.reduce((sum: number, evento: any) => sum + (evento.valor_total_receber || 0), 0);
-  const totalLucro = eventos.reduce(
-    (sum: number, evento: any) => sum + ((evento.valor_total_receber || 0) - (evento.valor_total_custos || 0)),
-    0
-  );
+    const totalReceita = eventos.reduce((sum: number, evento: any) => sum + (evento.valor_total_receber || 0), 0);
+    const totalLucro = eventos.reduce(
+      (sum: number, evento: any) => sum + ((evento.valor_total_receber || 0) - (evento.valor_total_custos || 0)),
+      0
+    );
 
-  const stats = {
-    totalEventos: eventos.length,
-    totalReceita,
-    totalLucro,
-    margemMedia: totalReceita > 0 ? (totalLucro / totalReceita) * 100 : 0,
-    ultimoEvento: eventos[0] || null,
-    proximoEvento: eventos
-      .filter((evento: any) => new Date(evento.data_evento) >= new Date())
-      .sort((a: any, b: any) => new Date(a.data_evento).getTime() - new Date(b.data_evento).getTime())[0] || null
-  };
+    const stats = {
+      totalEventos: eventos.length,
+      totalReceita,
+      totalLucro,
+      margemMedia: totalReceita > 0 ? (totalLucro / totalReceita) * 100 : 0,
+      ultimoEvento: eventos[0] || null,
+      proximoEvento: eventos
+        .filter((evento: any) => new Date(evento.data_evento) >= new Date())
+        .sort((a: any, b: any) => new Date(a.data_evento).getTime() - new Date(b.data_evento).getTime())[0] || null
+    };
 
-  return c.json({
-    contratante,
-    eventos,
-    stats
-  });
+    return c.json({
+      contratante,
+      eventos,
+      stats
+    });
+  } catch (error) {
+    console.error('Error fetching contratante details:', error);
+    return c.json({ error: 'Erro ao buscar detalhes do contratante' }, 500);
+  }
 });
 
 // Recebiveis endpoints
@@ -896,35 +900,37 @@ app.get('/api/fornecedores/:id', validateId(), authMiddleware, async (c) => {
       return c.json({ error: 'Fornecedor não encontrado' }, 404);
     }
 
-  const { results: compromissos } = await c.env.DB.prepare(
-    `SELECT vp.*, e.nome_evento as evento_nome
-     FROM vencimentos_pagar vp
-     JOIN eventos e ON e.id = vp.evento_id
-     WHERE vp.fornecedor_id = ? AND vp.user_id = ?
-     ORDER BY vp.data_vencimento DESC`
-  ).bind(fornecedorId, user.id).all();
+    const { results: compromissos } = await c.env.DB.prepare(
+      `SELECT vp.*, e.nome_evento as evento_nome
+       FROM vencimentos_pagar vp
+       JOIN eventos e ON e.id = vp.evento_id
+       WHERE vp.fornecedor_id = ? AND vp.user_id = ?
+       ORDER BY vp.data_vencimento DESC`
+    ).bind(fornecedorId, user.id).all();
 
-  const stats = {
-    totalPagamentos: compromissos.length,
-    totalPago: compromissos
-      .filter((item: any) => item.status_pagamento === 'Pago')
-      .reduce((sum: number, item: any) => sum + item.valor, 0),
-    totalPendente: compromissos
-      .filter((item: any) => item.status_pagamento === 'Pendente')
-      .reduce((sum: number, item: any) => sum + item.valor, 0),
-    proximoPagamento: compromissos
-      .filter((item: any) => item.status_pagamento === 'Pendente' && new Date(item.data_vencimento) >= new Date())
-      .sort((a: any, b: any) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime())[0] || null
-  };
+    const stats = {
+      totalPagamentos: compromissos.length,
+      totalPago: compromissos
+        .filter((item: any) => item.status_pagamento === 'Pago')
+        .reduce((sum: number, item: any) => sum + item.valor, 0),
+      totalPendente: compromissos
+        .filter((item: any) => item.status_pagamento === 'Pendente')
+        .reduce((sum: number, item: any) => sum + item.valor, 0),
+      proximoPagamento: compromissos
+        .filter((item: any) => item.status_pagamento === 'Pendente' && new Date(item.data_vencimento) >= new Date())
+        .sort((a: any, b: any) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime())[0] || null
+    };
 
-  return c.json({
-    fornecedor,
-    compromissos,
-    stats
-  });
+    return c.json({
+      fornecedor,
+      compromissos,
+      stats
+    });
+  } catch (error) {
+    console.error('Error fetching fornecedor details:', error);
+    return c.json({ error: 'Erro ao buscar detalhes do fornecedor' }, 500);
+  }
 });
-
-export default app;
 
 // Checklist & tarefas endpoints
 app.get('/api/checklists/templates', authMiddleware, async (c) => {
@@ -1241,3 +1247,5 @@ app.patch('/api/eventos/:id/tarefas/:tarefaId', validateIds('id', 'tarefaId'), a
     return c.json({ error: 'Erro ao atualizar tarefa' }, 500);
   }
 });
+
+export default app;
