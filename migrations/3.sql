@@ -1,0 +1,1 @@
+ALTER TABLE documentos_evento ADD COLUMN r2_key TEXT;
