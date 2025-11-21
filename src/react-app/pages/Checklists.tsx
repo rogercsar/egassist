@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/react-app/components/AppLayout";
 import { Plus, ClipboardList, Clock, ListChecks, Loader2, Sparkles, CheckCircle } from "lucide-react";
-import { Link } from "react-router";
 
 interface ChecklistTemplate {
   id: number;

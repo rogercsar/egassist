@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useToast } from '../context/ToastContext';
 
 interface ErrorHandler {
   error: string | null;
@@ -7,16 +8,16 @@ interface ErrorHandler {
 }
 
 /**
- * Hook para gerenciar erros de forma centralizada
+ * Hook para gerenciar erros de forma centralizada usando ToastContext
  */
 export function useErrorHandler(): ErrorHandler {
-  const [error, setError] = useState<string | null>(null);
+  const { showError } = useToast();
 
   const handleError = useCallback((err: unknown, userMessage?: string) => {
     console.error('Error:', err);
-    
+
     let message = userMessage;
-    
+
     if (!message) {
       if (err instanceof Error) {
         message = err.message;
@@ -26,18 +27,15 @@ export function useErrorHandler(): ErrorHandler {
         message = 'Ocorreu um erro. Tente novamente.';
       }
     }
-    
-    setError(message);
-    
-    // Auto-dismiss após 5 segundos
-    setTimeout(() => setError(null), 5000);
-  }, []);
+
+    showError(message);
+  }, [showError]);
 
   const clearError = useCallback(() => {
-    setError(null);
+    // No-op since toasts handle their own dismissal
   }, []);
 
-  return { error, handleError, clearError };
+  return { error: null, handleError, clearError };
 }
 
 

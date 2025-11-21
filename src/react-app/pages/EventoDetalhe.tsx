@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/react-app/components/AppLayout";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Calendar, User, Phone, Mail, TrendingUp, DollarSign, Clock, Paperclip, Trash2, Download, UploadCloud } from "lucide-react";
+import { ArrowLeft, Calendar, User, Phone, Mail, TrendingUp, DollarSign, Clock } from "lucide-react";
 import { useErrorHandler } from "@/react-app/hooks/useErrorHandler";
 import { ErrorToast } from "@/react-app/components/ErrorToast";
 import { SuccessToast } from "@/react-app/components/SuccessToast";
@@ -73,8 +73,6 @@ export default function EventoDetalhe() {
     data_vencimento: "",
   });
   const [documentos, setDocumentos] = useState<DocumentoEvento[]>([]);
-  const [docsLoading, setDocsLoading] = useState(true);
-  const [uploadingDocumento, setUploadingDocumento] = useState(false);
   const [documentoForm, setDocumentoForm] = useState<{
     tipo_documento: string;
     file: File | null;
@@ -135,7 +133,6 @@ export default function EventoDetalhe() {
       } finally {
         setLoading(false);
         setTarefasLoading(false);
-        setDocsLoading(false);
       }
     };
 
@@ -172,13 +169,6 @@ export default function EventoDetalhe() {
       default:
         return 'bg-amber-100 text-amber-700';
     }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (!bytes) return '0 KB';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const fetchTarefasEvento = async () => {
@@ -250,44 +240,13 @@ export default function EventoDetalhe() {
 
   const fetchDocumentos = async () => {
     if (!id) return;
-    setDocsLoading(true);
     try {
       const response = await fetch(`/api/eventos/${id}/documentos`);
       const data = await response.json();
       setDocumentos(data);
     } catch (error) {
       console.error('Failed to fetch documents', error);
-    } finally {
-      setDocsLoading(false);
     }
-  };
-
-  const handleUploadDocumento = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id || !documentoForm.file) return;
-    setUploadingDocumento(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', documentoForm.file);
-      formData.append('tipo_documento', documentoForm.tipo_documento);
-      const response = await fetch(`/api/eventos/${id}/documentos`, {
-        method: 'POST',
-        body: formData
-      });
-      if (response.ok) {
-        setDocumentoForm({ tipo_documento: 'Contrato', file: null });
-        fetchDocumentos();
-      }
-    } catch (error) {
-      console.error('Failed to upload document', error);
-    } finally {
-      setUploadingDocumento(false);
-    }
-  };
-
-  const handleDeleteClick = (docId: number) => {
-    setDocToDelete(docId);
-    setShowDeleteConfirm(true);
   };
 
   const handleDeleteConfirm = async () => {
@@ -320,6 +279,22 @@ export default function EventoDetalhe() {
     );
   }
 
+  if (!evento) {
+    return (
+      <AppLayout>
+        <div className="max-w-5xl mx-auto">
+          <p className="text-slate-500">Evento não encontrado.</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Calculate lucro and margemLucro
+  const lucro = evento.valor_total_receber - evento.valor_total_custos;
+  const margemLucro = evento.valor_total_receber > 0 
+    ? (lucro / evento.valor_total_receber) * 100 
+    : 0;
+
   return (
     <AppLayout>
       {error && <ErrorToast message={error} onClose={clearError} />}
@@ -348,16 +323,16 @@ export default function EventoDetalhe() {
           </Link>
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">{evento.nome_evento}</h1>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">{evento?.nome_evento || ''}</h1>
               <div className="flex items-center gap-4 text-slate-600">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  <span className="capitalize">{formatDate(evento.data_evento)}</span>
+                  <span className="capitalize">{evento?.data_evento ? formatDate(evento.data_evento) : ''}</span>
                 </div>
               </div>
             </div>
-            <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(evento.status_evento)}`}>
-              {evento.status_evento}
+            <span className={`px-4 py-2 rounded-full text-sm font-medium ${evento ? getStatusColor(evento.status_evento) : ''}`}>
+              {evento?.status_evento || ''}
             </span>
           </div>
         </div>
@@ -367,7 +342,7 @@ export default function EventoDetalhe() {
           <div className="bg-white rounded-2xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100">
             <p className="text-sm text-slate-500 font-medium mb-2">Receita Total</p>
             <p className="text-3xl font-bold text-green-600">
-              {formatCurrency(evento.valor_total_receber)}
+              {formatCurrency(evento?.valor_total_receber || 0)}
             </p>
           </div>
 
@@ -375,7 +350,7 @@ export default function EventoDetalhe() {
           <div className="bg-white rounded-2xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100">
             <p className="text-sm text-slate-500 font-medium mb-2">Custos Totais</p>
             <p className="text-3xl font-bold text-red-600">
-              {formatCurrency(evento.valor_total_custos)}
+              {formatCurrency(evento?.valor_total_custos || 0)}
             </p>
           </div>
 
@@ -395,7 +370,7 @@ export default function EventoDetalhe() {
         </div>
 
         {/* Cliente Info */}
-        {evento.contratante_nome && (
+        {evento?.contratante_nome && (
           <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 overflow-hidden mb-8">
             <div className="p-6 border-b border-slate-100">
               <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">

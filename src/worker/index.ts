@@ -10,9 +10,36 @@ import { getCookie, setCookie } from "hono/cookie";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { validateId, validateIds } from "./middleware/validation";
-import { sanitizeString, sanitizeObject } from "../shared/utils";
+import { rateLimit } from "./middleware/rateLimit";
+import { sanitizeString } from "../shared/utils";
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Global Error Handler
+app.onError((err, c) => {
+  console.error('Global Error:', err);
+  if (err instanceof z.ZodError) {
+    return c.json({ error: 'Validation Error', details: err.errors }, 400);
+  }
+  return c.json({ error: 'Internal Server Error', message: err.message }, 500);
+});
+
+// Middleware to enable Foreign Keys for D1
+app.use(async (c, next) => {
+  // Enforce foreign keys for every request that might use the DB
+  // Note: D1 might not persist this across requests, so we run it per request if needed.
+  // However, for performance, we might want to batch it with queries, but Hono middleware is a good place to start.
+  try {
+    await c.env.DB.prepare('PRAGMA foreign_keys = ON').run();
+  } catch (e) {
+    console.error('Failed to enable foreign keys:', e);
+  }
+  await next();
+});
+
+// Rate Limiting (100 requests per minute)
+app.use(rateLimit({ limit: 100, windowMs: 60 * 1000 }));
+
 
 // OAuth redirect URL
 app.get('/api/oauth/google/redirect_url', async (c) => {
@@ -92,47 +119,100 @@ app.get('/api/dashboard/stats', authMiddleware, async (c) => {
   const endOfWindow = endOfMonth;
   const ninetyDaysFromNow = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-  // A Receber (Mês)
-  const { results: receivablesMonth } = await c.env.DB.prepare(
-    `SELECT SUM(valor) as total FROM vencimentos_receber 
-     WHERE user_id = ? AND status_pagamento = 'Pendente' 
-     AND data_vencimento BETWEEN ? AND ?`
-  ).bind(user.id, startOfMonth, endOfMonth).all();
+  // Execute all queries in parallel
+  const [
+    { results: receivablesMonth },
+    { results: overduePayments },
+    { results: upcomingEvents },
+    { results: receitaSeries },
+    { results: despesaSeries },
+    { results: margemBruta },
+    { results: pendReceber },
+    { results: pendPagar },
+    { results: fluxoReceitas },
+    { results: fluxoDespesas }
+  ] = await Promise.all([
+    // A Receber (Mês)
+    c.env.DB.prepare(
+      `SELECT SUM(valor) as total FROM vencimentos_receber 
+       WHERE user_id = ? AND status_pagamento = 'Pendente' 
+       AND data_vencimento BETWEEN ? AND ?`
+    ).bind(user.id, startOfMonth, endOfMonth).all(),
 
-  // Pagamentos Atrasados
-  const { results: overduePayments } = await c.env.DB.prepare(
-    `SELECT COUNT(*) as count, SUM(valor) as total FROM vencimentos_receber 
-     WHERE user_id = ? AND status_pagamento = 'Pendente' 
-     AND data_vencimento < ?`
-  ).bind(user.id, today).all();
+    // Pagamentos Atrasados
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as count, SUM(valor) as total FROM vencimentos_receber 
+       WHERE user_id = ? AND status_pagamento = 'Pendente' 
+       AND data_vencimento < ?`
+    ).bind(user.id, today).all(),
 
-  // Próximos Eventos (30 dias)
-  const { results: upcomingEvents } = await c.env.DB.prepare(
-    `SELECT e.*, c.nome as contratante_nome 
-     FROM eventos e 
-     LEFT JOIN contratantes c ON e.contratante_id = c.id
-     WHERE e.user_id = ? AND e.data_evento BETWEEN ? AND ?
-     ORDER BY e.data_evento ASC`
-  ).bind(user.id, today, thirtyDaysFromNow).all();
+    // Próximos Eventos (30 dias)
+    c.env.DB.prepare(
+      `SELECT e.*, c.nome as contratante_nome 
+       FROM eventos e 
+       LEFT JOIN contratantes c ON e.contratante_id = c.id
+       WHERE e.user_id = ? AND e.data_evento BETWEEN ? AND ?
+       ORDER BY e.data_evento ASC`
+    ).bind(user.id, today, thirtyDaysFromNow).all(),
 
-  // Séries financeiras (últimos 6 meses)
-  const { results: receitaSeries } = await c.env.DB.prepare(
-    `SELECT strftime('%Y-%m', data_vencimento) as periodo, SUM(valor) as total 
-     FROM vencimentos_receber
-     WHERE user_id = ? AND data_vencimento BETWEEN ? AND ?
-       AND status_pagamento != 'Cancelado'
-     GROUP BY periodo
-     ORDER BY periodo ASC`
-  ).bind(user.id, sixMonthsAgo, endOfWindow).all();
+    // Séries financeiras (últimos 6 meses)
+    c.env.DB.prepare(
+      `SELECT strftime('%Y-%m', data_vencimento) as periodo, SUM(valor) as total 
+       FROM vencimentos_receber
+       WHERE user_id = ? AND data_vencimento BETWEEN ? AND ?
+         AND status_pagamento != 'Cancelado'
+       GROUP BY periodo
+       ORDER BY periodo ASC`
+    ).bind(user.id, sixMonthsAgo, endOfWindow).all(),
 
-  const { results: despesaSeries } = await c.env.DB.prepare(
-    `SELECT strftime('%Y-%m', data_vencimento) as periodo, SUM(valor) as total 
-     FROM vencimentos_pagar
-     WHERE user_id = ? AND data_vencimento BETWEEN ? AND ?
-       AND status_pagamento != 'Cancelado'
-     GROUP BY periodo
-     ORDER BY periodo ASC`
-  ).bind(user.id, sixMonthsAgo, endOfWindow).all();
+    c.env.DB.prepare(
+      `SELECT strftime('%Y-%m', data_vencimento) as periodo, SUM(valor) as total 
+       FROM vencimentos_pagar
+       WHERE user_id = ? AND data_vencimento BETWEEN ? AND ?
+         AND status_pagamento != 'Cancelado'
+       GROUP BY periodo
+       ORDER BY periodo ASC`
+    ).bind(user.id, sixMonthsAgo, endOfWindow).all(),
+
+    // Margem Bruta
+    c.env.DB.prepare(
+      `SELECT SUM(valor_total_receber) as receita_total, SUM(valor_total_custos) as custo_total
+       FROM eventos
+       WHERE user_id = ?`
+    ).bind(user.id).all(),
+
+    // Pendentes Receber
+    c.env.DB.prepare(
+      `SELECT SUM(valor) as total
+       FROM vencimentos_receber
+       WHERE user_id = ? AND status_pagamento = 'Pendente'`
+    ).bind(user.id).all(),
+
+    // Pendentes Pagar
+    c.env.DB.prepare(
+      `SELECT SUM(valor) as total
+       FROM vencimentos_pagar
+       WHERE user_id = ? AND status_pagamento = 'Pendente'`
+    ).bind(user.id).all(),
+
+    // Fluxo Receitas
+    c.env.DB.prepare(
+      `SELECT data_vencimento, SUM(valor) as total
+       FROM vencimentos_receber
+       WHERE user_id = ? AND data_vencimento BETWEEN ? AND ? AND status_pagamento != 'Cancelado'
+       GROUP BY data_vencimento
+       ORDER BY data_vencimento ASC`
+    ).bind(user.id, today, ninetyDaysFromNow).all(),
+
+    // Fluxo Despesas
+    c.env.DB.prepare(
+      `SELECT data_vencimento, SUM(valor) as total
+       FROM vencimentos_pagar
+       WHERE user_id = ? AND data_vencimento BETWEEN ? AND ? AND status_pagamento != 'Cancelado'
+       GROUP BY data_vencimento
+       ORDER BY data_vencimento ASC`
+    ).bind(user.id, today, ninetyDaysFromNow).all()
+  ]);
 
   const monthsWindow = (() => {
     const arr = [];
@@ -149,8 +229,8 @@ app.get('/api/dashboard/stats', authMiddleware, async (c) => {
   })();
 
   const series = monthsWindow.map((month) => {
-    const receita = receitaSeries.find((item: any) => item.periodo === month.key)?.total || 0;
-    const despesa = despesaSeries.find((item: any) => item.periodo === month.key)?.total || 0;
+    const receita = Number(receitaSeries.find((item: any) => item.periodo === month.key)?.total || 0);
+    const despesa = Number(despesaSeries.find((item: any) => item.periodo === month.key)?.total || 0);
     return {
       period: month.label,
       receita,
@@ -160,45 +240,11 @@ app.get('/api/dashboard/stats', authMiddleware, async (c) => {
     };
   });
 
-  const { results: margemBruta } = await c.env.DB.prepare(
-    `SELECT SUM(valor_total_receber) as receita_total, SUM(valor_total_custos) as custo_total
-     FROM eventos
-     WHERE user_id = ?`
-  ).bind(user.id).all();
-
-  const receitaTotal = margemBruta[0]?.receita_total || 0;
-  const custoTotal = margemBruta[0]?.custo_total || 0;
+  const receitaTotal = Number(margemBruta[0]?.receita_total || 0);
+  const custoTotal = Number(margemBruta[0]?.custo_total || 0);
   const lucroTotal = receitaTotal - custoTotal;
 
-  const { results: pendReceber } = await c.env.DB.prepare(
-    `SELECT SUM(valor) as total
-     FROM vencimentos_receber
-     WHERE user_id = ? AND status_pagamento = 'Pendente'`
-  ).bind(user.id).all();
-
-  const { results: pendPagar } = await c.env.DB.prepare(
-    `SELECT SUM(valor) as total
-     FROM vencimentos_pagar
-     WHERE user_id = ? AND status_pagamento = 'Pendente'`
-  ).bind(user.id).all();
-
-  const cashPosition = (pendReceber[0]?.total || 0) - (pendPagar[0]?.total || 0);
-
-  const { results: fluxoReceitas } = await c.env.DB.prepare(
-    `SELECT data_vencimento, SUM(valor) as total
-     FROM vencimentos_receber
-     WHERE user_id = ? AND data_vencimento BETWEEN ? AND ? AND status_pagamento != 'Cancelado'
-     GROUP BY data_vencimento
-     ORDER BY data_vencimento ASC`
-  ).bind(user.id, today, ninetyDaysFromNow).all();
-
-  const { results: fluxoDespesas } = await c.env.DB.prepare(
-    `SELECT data_vencimento, SUM(valor) as total
-     FROM vencimentos_pagar
-     WHERE user_id = ? AND data_vencimento BETWEEN ? AND ? AND status_pagamento != 'Cancelado'
-     GROUP BY data_vencimento
-     ORDER BY data_vencimento ASC`
-  ).bind(user.id, today, ninetyDaysFromNow).all();
+  const cashPosition = Number(pendReceber[0]?.total || 0) - Number(pendPagar[0]?.total || 0);
 
   const fluxoDatas = Array.from(
     new Set([
@@ -282,7 +328,7 @@ app.get('/api/eventos/:id', validateId(), authMiddleware, async (c) => {
   }
 
   const id = c.req.param('id');
-  
+
   try {
     const evento = await c.env.DB.prepare(
       `SELECT e.*, c.nome as contratante_nome, c.email as contratante_email, c.telefone as contratante_telefone
@@ -379,7 +425,7 @@ app.post('/api/eventos/:id/documentos', validateId(), authMiddleware, async (c) 
   }
 
   const eventoId = c.req.param('id');
-  
+
   // Verificar se evento existe e pertence ao usuário
   try {
     const evento = await c.env.DB.prepare(
@@ -398,9 +444,12 @@ app.post('/api/eventos/:id/documentos', validateId(), authMiddleware, async (c) 
   const file = formData.get('file');
   const tipoDocumento = sanitizeString(formData.get('tipo_documento')?.toString() || 'Outro');
 
-  if (!(file instanceof File)) {
+  if (!file || typeof file === 'string') {
     return c.json({ error: 'Arquivo inválido' }, 400);
   }
+
+  // Type guard: ensure file is a File object
+  const fileObj = file as File;
 
   const allowedTypes = [
     'application/pdf',
@@ -410,21 +459,21 @@ app.post('/api/eventos/:id/documentos', validateId(), authMiddleware, async (c) 
     'image/jpeg'
   ];
   const maxSize = 5 * 1024 * 1024;
-  if (file.size > maxSize) {
+  if (fileObj.size > maxSize) {
     return c.json({ error: 'Arquivo excede 5MB' }, 400);
   }
-  if (file.type && !allowedTypes.includes(file.type)) {
+  if (fileObj.type && !allowedTypes.includes(fileObj.type)) {
     return c.json({ error: 'Tipo de arquivo não permitido' }, 400);
   }
 
   try {
-    const arrayBuffer = await file.arrayBuffer();
-    const sanitizedFileName = sanitizeString(file.name);
+    const arrayBuffer = await fileObj.arrayBuffer();
+    const sanitizedFileName = sanitizeString(fileObj.name);
 
     const key = `users/${user.id}/eventos/${eventoId}/${Date.now()}_${sanitizedFileName}`;
     await c.env.R2_BUCKET.put(key, arrayBuffer, {
       httpMetadata: {
-        contentType: file.type || 'application/octet-stream',
+        contentType: fileObj.type || 'application/octet-stream',
         contentDisposition: `attachment; filename="${sanitizedFileName}"`
       }
     });
@@ -437,8 +486,8 @@ app.post('/api/eventos/:id/documentos', validateId(), authMiddleware, async (c) 
       user.id,
       sanitizedFileName,
       tipoDocumento,
-      file.type || 'application/octet-stream',
-      file.size,
+      fileObj.type || 'application/octet-stream',
+      fileObj.size,
       key
     ).run();
 
@@ -469,18 +518,19 @@ app.get('/api/eventos/:id/documentos/:docId/download', validateIds('id', 'docId'
       return c.json({ error: 'Documento não encontrado' }, 404);
     }
 
-    if (documento.r2_key) {
-      const obj = await c.env.R2_BUCKET.get(documento.r2_key);
+    const doc = documento as { nome_arquivo: string | null; mime_type: string | null; r2_key: string | null };
+    if (doc.r2_key) {
+      const obj = await c.env.R2_BUCKET.get(doc.r2_key);
       if (obj && obj.body) {
         return new Response(obj.body, {
           headers: {
-            'Content-Type': documento.mime_type || 'application/octet-stream',
-            'Content-Disposition': `attachment; filename="${documento.nome_arquivo}"`
+            'Content-Type': String(doc.mime_type || 'application/octet-stream'),
+            'Content-Disposition': `attachment; filename="${String(doc.nome_arquivo)}"`
           }
         });
       }
     }
-    
+
     return c.json({ error: 'Documento não encontrado no armazenamento' }, 404);
   } catch (error) {
     console.error('Error downloading documento:', error);
@@ -507,9 +557,10 @@ app.delete('/api/eventos/:id/documentos/:docId', validateIds('id', 'docId'), aut
     }
 
     // Deletar do R2 se existir
-    if (doc.r2_key) {
+    const docWithKey = doc as { r2_key: string | null };
+    if (docWithKey.r2_key) {
       try {
-        await c.env.R2_BUCKET.delete(doc.r2_key);
+        await c.env.R2_BUCKET.delete(docWithKey.r2_key);
       } catch (error) {
         console.error('Error deleting from R2:', error);
         // Continuar mesmo se falhar no R2
@@ -1107,8 +1158,8 @@ app.post('/api/checklists/templates/:templateId/aplicar', validateId(), authMidd
         user.id,
         tarefa.descricao_tarefa,
         shiftDate(
-          evento.data_evento,
-          tarefa.prazo_relativo_dias,
+          String(evento.data_evento),
+          Number(tarefa.prazo_relativo_dias),
           tarefa.tipo_prazo === 'depois' ? 'depois' : 'antes'
         )
       )

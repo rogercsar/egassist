@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@getmocha/users-service/react";
+import { ToastProvider } from "@/react-app/context/ToastContext";
 import HomePage from "@/react-app/pages/Home";
 import PlanosPage from "@/react-app/pages/Planos";
 import AuthCallbackPage from "@/react-app/pages/AuthCallback";
@@ -20,25 +21,27 @@ import ProtectedRoute from "@/react-app/components/ProtectedRoute";
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/planos" element={<PlanosPage />} />
-          <Route path="/auth/callback" element={<AuthCallbackPage />} />
-          <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-          <Route path="/eventos" element={<ProtectedRoute><EventosPage /></ProtectedRoute>} />
-          <Route path="/eventos/novo" element={<ProtectedRoute><NovoEventoPage /></ProtectedRoute>} />
-          <Route path="/eventos/:id" element={<ProtectedRoute><EventoDetalhePage /></ProtectedRoute>} />
-          <Route path="/contratantes" element={<ProtectedRoute><ContratantesPage /></ProtectedRoute>} />
-          <Route path="/contratantes/:id" element={<ProtectedRoute><ContratanteDetalhePage /></ProtectedRoute>} />
-          <Route path="/fornecedores" element={<ProtectedRoute><FornecedoresPage /></ProtectedRoute>} />
-          <Route path="/fornecedores/:id" element={<ProtectedRoute><FornecedorDetalhePage /></ProtectedRoute>} />
-          <Route path="/recebiveis" element={<ProtectedRoute><RecebiveisPage /></ProtectedRoute>} />
-          <Route path="/pagaveis" element={<ProtectedRoute><PagaveisPage /></ProtectedRoute>} />
-          <Route path="/checklists" element={<ProtectedRoute><ChecklistsPage /></ProtectedRoute>} />
-          <Route path="/calendario" element={<ProtectedRoute><CalendarioPage /></ProtectedRoute>} />
-        </Routes>
-      </Router>
+      <ToastProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/planos" element={<PlanosPage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path="/eventos" element={<ProtectedRoute><EventosPage /></ProtectedRoute>} />
+            <Route path="/eventos/novo" element={<ProtectedRoute><NovoEventoPage /></ProtectedRoute>} />
+            <Route path="/eventos/:id" element={<ProtectedRoute><EventoDetalhePage /></ProtectedRoute>} />
+            <Route path="/contratantes" element={<ProtectedRoute><ContratantesPage /></ProtectedRoute>} />
+            <Route path="/contratantes/:id" element={<ProtectedRoute><ContratanteDetalhePage /></ProtectedRoute>} />
+            <Route path="/fornecedores" element={<ProtectedRoute><FornecedoresPage /></ProtectedRoute>} />
+            <Route path="/fornecedores/:id" element={<ProtectedRoute><FornecedorDetalhePage /></ProtectedRoute>} />
+            <Route path="/recebiveis" element={<ProtectedRoute><RecebiveisPage /></ProtectedRoute>} />
+            <Route path="/pagaveis" element={<ProtectedRoute><PagaveisPage /></ProtectedRoute>} />
+            <Route path="/checklists" element={<ProtectedRoute><ChecklistsPage /></ProtectedRoute>} />
+            <Route path="/calendario" element={<ProtectedRoute><CalendarioPage /></ProtectedRoute>} />
+          </Routes>
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }

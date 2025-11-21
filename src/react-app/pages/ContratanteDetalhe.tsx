@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/react-app/components/AppLayout";
 import { useParams, Link } from "react-router";
-import { ArrowLeft, Mail, Phone, Calendar, TrendingUp, Users, MapPin } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Calendar, TrendingUp, Users } from "lucide-react";
 
 interface Contratante {
   id: number;

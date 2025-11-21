@@ -15,9 +15,15 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.12.0",
+    "@cloudflare/workers-types": "^4.20251121.0",
     "@eslint/js": "9.25.1",
-    "@getmocha/vite-plugins": "latest",
     "@getmocha/users-service": "^0.0.4",
+    "@getmocha/vite-plugins": "latest",
+    "@types/babel__generator": "^7.27.0",
+    "@types/babel__template": "^7.4.4",
+    "@types/babel__traverse": "^7.28.0",
+    "@types/d3-color": "^3.1.3",
+    "@types/d3-path": "^3.1.1",
     "@types/node": "22.14.1",
     "@types/react": "19.0.10",
     "@types/react-dom": "19.0.4",
@@ -35,9 +41,11 @@
     "wrangler": "^4.33.0"
   },
   "scripts": {
-    "build": "tsc -b && vite build",
+    "build": "npm exec -- tsc -b && npm exec -- vite build",
+    "build:ts": "npm exec -- tsc -b",
+    "build:vite": "npm exec -- vite build",
     "cf-typegen": "wrangler types",
-    "check": "tsc && vite build && wrangler deploy --dry-run",
+    "check": "npm exec -- tsc && npm exec -- vite build && wrangler deploy --dry-run",
     "dev": "vite",
     "lint": "eslint ."
   }
