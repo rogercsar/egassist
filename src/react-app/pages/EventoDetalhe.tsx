@@ -73,13 +73,6 @@ export default function EventoDetalhe() {
     data_vencimento: "",
   });
   const [documentos, setDocumentos] = useState<DocumentoEvento[]>([]);
-  const [documentoForm, setDocumentoForm] = useState<{
-    tipo_documento: string;
-    file: File | null;
-  }>({
-    tipo_documento: "Contrato",
-    file: null
-  });
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [docToDelete, setDocToDelete] = useState<number | null>(null);
@@ -238,30 +231,21 @@ export default function EventoDetalhe() {
     }
   };
 
-  const fetchDocumentos = async () => {
-    if (!id) return;
-    try {
-      const response = await fetch(`/api/eventos/${id}/documentos`);
-      const data = await response.json();
-      setDocumentos(data);
-    } catch (error) {
-      console.error('Failed to fetch documents', error);
-    }
-  };
+
 
   const handleDeleteConfirm = async () => {
     if (!id || !docToDelete) return;
-    
+
     try {
       const response = await fetch(`/api/eventos/${id}/documentos/${docToDelete}`, {
         method: 'DELETE'
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Falha ao deletar documento');
       }
-      
+
       setDocumentos(documentos.filter(doc => doc.id !== docToDelete));
       setSuccess('Documento deletado com sucesso!');
       setShowDeleteConfirm(false);
@@ -291,8 +275,8 @@ export default function EventoDetalhe() {
 
   // Calculate lucro and margemLucro
   const lucro = evento.valor_total_receber - evento.valor_total_custos;
-  const margemLucro = evento.valor_total_receber > 0 
-    ? (lucro / evento.valor_total_receber) * 100 
+  const margemLucro = evento.valor_total_receber > 0
+    ? (lucro / evento.valor_total_receber) * 100
     : 0;
 
   return (
@@ -386,7 +370,7 @@ export default function EventoDetalhe() {
               {evento.contratante_email && (
                 <div>
                   <p className="text-sm text-slate-500 mb-1">E-mail</p>
-                  <a 
+                  <a
                     href={`mailto:${evento.contratante_email}`}
                     className="text-amber-600 hover:text-amber-700 font-medium flex items-center gap-2"
                   >
@@ -398,7 +382,7 @@ export default function EventoDetalhe() {
               {evento.contratante_telefone && (
                 <div>
                   <p className="text-sm text-slate-500 mb-1">Telefone</p>
-                  <a 
+                  <a
                     href={`tel:${evento.contratante_telefone}`}
                     className="text-amber-600 hover:text-amber-700 font-medium flex items-center gap-2"
                   >
@@ -453,9 +437,8 @@ export default function EventoDetalhe() {
                       </div>
                     </div>
                     <span
-                      className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                        tarefa.is_concluida ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                      }`}
+                      className={`text-xs font-semibold px-3 py-1 rounded-full ${tarefa.is_concluida ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                        }`}
                     >
                       {tarefa.is_concluida ? 'Concluída' : 'Pendente'}
                     </span>
@@ -559,11 +542,10 @@ export default function EventoDetalhe() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-green-600">{formatCurrency(recebivel.valor)}</p>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          recebivel.status_pagamento === 'Recebido' 
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
+                        <span className={`text-xs px-2 py-1 rounded ${recebivel.status_pagamento === 'Recebido'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-amber-100 text-amber-700'
+                          }`}>
                           {recebivel.status_pagamento}
                         </span>
                       </div>
@@ -615,11 +597,10 @@ export default function EventoDetalhe() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-red-600">{formatCurrency(pagavel.valor)}</p>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          pagavel.status_pagamento === 'Pago' 
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
+                        <span className={`text-xs px-2 py-1 rounded ${pagavel.status_pagamento === 'Pago'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-amber-100 text-amber-700'
+                          }`}>
                           {pagavel.status_pagamento}
                         </span>
                       </div>

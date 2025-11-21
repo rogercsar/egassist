@@ -10,7 +10,6 @@ export const rateLimit = (options: { limit: number; windowMs: number }) => {
         const user = c.get('user');
         const key = user ? `user:${user.id}` : `ip:${ip}`;
         const now = Date.now();
-        const windowStart = now - options.windowMs;
 
         try {
             // Clean up old entries (probabilistic or scheduled, here we do it lazily or just ignore for now to save writes)
